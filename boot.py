@@ -15,6 +15,6 @@ if boot_sta_if.isconnected():
     boot_sta_if.disconnect()
 boot_sta_if.active(False)
 
-time.sleep(5)
+time.sleep(10)
 
 import simpleUdpWx

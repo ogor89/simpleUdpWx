@@ -3,27 +3,10 @@ import network
 import socket
 import time
 from bme280 import BME280
-
+from config import Config
 
 sta_if = network.WLAN(network.STA_IF)
-
-
-class Config:
-
-    wifi_ssid = 'WiFi_name'  # WiFi SSID.
-    wifi_passwd = 'WiFi_password'  # WiFi password.
-    wifi_timeout = 60
-
-    txDelay = 5  # Delay between frames (in minutes).
-    servers = ['euro.aprs2.net']  # List of APRS-IS servers. ( ['server1', 'server2'] )
-
-    call = 'N0CALL-1'  # Call with or without suffix.
-    passwd = '12345'  # APRS-IS password.
-    symbol = '/_'  # Two symbol coded APRS icon.
-    latitude = '5000.00N'
-    longitude = '01900.00E'
-    comment = 'simpleUDP WX station'  # Comment attached to WX data.
-    status = ''  # Status sent as separate APRS frame. If None or '' additional frame will not be sent.
+aprsDefaultPort = 8080
 
 
 def wifi_connect():
@@ -34,7 +17,7 @@ def wifi_connect():
         sta_if.connect(Config.wifi_ssid, Config.wifi_passwd)
 
         for timestep in range(0, Config.wifi_timeout):
-            print(timestep, end=' ')
+            print(timestep + 1, end=' ')
             time.sleep(1)
             if sta_if.isconnected():
                 connected = True
@@ -47,6 +30,10 @@ def wifi_connect():
     return connected
 
 
+def wifi_ifconfig():
+    return sta_if.ifconfig()
+
+
 def wifi_disconnect():
     print('disconnecting...')
     time.sleep(2)
@@ -55,8 +42,15 @@ def wifi_disconnect():
     sta_if.active(False)
 
 
-def get_ip_from_addr(address, ip=8080):
-    return socket.getaddrinfo(address, ip)[0][-1]
+def get_ip_from_config():
+    ip = None
+    for server in Config.servers:
+        try:
+            ip = socket.getaddrinfo(server, aprsDefaultPort)[0][-1][0]
+        except Exception:
+            # TODO: Change to correct exception.
+            continue
+    return ip
 
 
 def read_sensor():
@@ -129,32 +123,50 @@ def aprs_status_frame():
     return None
 
 
-def udp_send(message, to_addr=None, port=None):
+def udp_send_many(messages, to_addr=None):
     if to_addr is None:
         return False
-    if port is None:
-        port = 8080
 
-    message = message.encode('utf-8')
-    sck = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    sck.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sck.sendto(message, (to_addr, port))
+    if isinstance(messages, list):
+        for message in messages:
+            message = message.encode('utf-8')
+            print('Sending:')
+            print(message)
+            sock.sendto(message, (to_addr, aprsDefaultPort))
+            # time.sleep(0.1)
 
 
 def aprsis_send_frames():
-    udp_send(aprsis_login_line() +
-             aprs_wx_frame(),
-             get_ip_from_addr(Config.servers[0])[0])
+    messages = [aprsis_login_line() + aprs_wx_frame()]
     if aprs_status_frame() is not None:
-        udp_send(aprsis_login_line() +
-                 aprs_status_frame(),
-                 get_ip_from_addr(Config.servers[0])[0])
+        messages = messages + [aprsis_login_line() + aprs_status_frame()]
+
+    udp_send_many(messages, get_ip_from_config(Config.servers[0]))
+
+
+connection_error_counter = 0
 
 
 while True:
+    next_delay = 1
+
     if wifi_connect():
-        print('Network config:', sta_if.ifconfig())
+        print('Network config:', wifi_ifconfig())
         aprsis_send_frames()
-    wifi_disconnect()
-    time.sleep(Config.txDelay * 60)
+        wifi_disconnect()
+
+        next_delay = Config.txDelay * 60
+        connection_error_counter = 0
+    else:
+        # TODO: verbose
+        connection_error_counter += 1
+
+    if 9 < connection_error_counter:
+        # TODO: verbose
+        wifi_disconnect()
+        next_delay = 60
+
+    time.sleep(next_delay)
