@@ -10,9 +10,9 @@ import time
 # webrepl.start()
 gc.collect()
 
+print('\nDeactivating WLAN...')
+
 boot_sta_if = network.WLAN(network.STA_IF)
-if boot_sta_if.isconnected():
-    boot_sta_if.disconnect()
 boot_sta_if.active(False)
 
 time.sleep(10)

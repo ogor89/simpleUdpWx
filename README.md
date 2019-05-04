@@ -44,10 +44,23 @@ Parameters needs to be changed:
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ogor89/simpleUdpWx/tags).
 
 ## Changelog
+1.1.0-alpha
+
+Fixes:
+* Server IP getting loop now breaks on first active server.
+
+Features:
+* TODOs
+* Docstrings
+* Data normalisation.
+* Separate file for classes and functions.
+* More "object" approach.
+* Version handling in software.
+
 1.0.2
 
 Fixes:
-* Fixed wrong argument calling UDP sending function.
+* Fixed wrong argument in UDP sending function call.
 
 1.0.1
 
@@ -70,21 +83,16 @@ Features:
 * Support for APRS comment frame.
 
 ## Known issues
+* Can't work with no-DHCP network.
 
 ## Plans
-1.1.0
-* TODOs
-* Docstrings
-* Separate file for classes and functions.
-* More "object" approach.
-* Version handling in software.
-
 1.2.0
 * Power saving for ESP8266.
 * Power saving for BME280.
 * Transmit delay based on interrupt.
 * Input voltage monitoring.
 * *verbose* configuration parameter.
+* DHCP support.
 * Complete README.md file.
 
 ## Author

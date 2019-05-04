@@ -1,4 +1,15 @@
 class Config:
+    """
+    This class holds all user configuration - from WiFi connection to APRS object data.
+    Variables needed to be changed by user:
+    wifi_ssid
+    wifi_passwd
+    call
+    passwd
+    latitude
+    longitude
+    altitude
+    """
 
     wifi_ssid = 'WiFi_name'  # WiFi SSID.
     wifi_passwd = 'WiFi_password'  # WiFi password.
@@ -14,5 +25,8 @@ class Config:
     symbol = '/_'  # Two symbol coded APRS icon.
     latitude = '5000.00N'
     longitude = '01900.00E'
-    comment = 'simpleUDP WX station'  # Comment attached to WX data.
-    status = ''  # Status sent as separate APRS frame. If None or '' additional frame will not be sent.
+    # Sensor elevation above sea level.
+    altitude = 150
+    comment = 'simpleUDPwx station'  # Comment attached to WX data.
+    # Status sent as separate APRS frame. If None or '' additional frame will not be sent.
+    status = ''
