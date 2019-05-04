@@ -144,7 +144,7 @@ def aprsis_send_frames():
     if aprs_status_frame() is not None:
         messages = messages + [aprsis_login_line() + aprs_status_frame()]
 
-    udp_send_many(messages, get_ip_from_config(Config.servers[0]))
+    udp_send_many(messages, get_ip_from_config())
 
 
 connection_error_counter = 0

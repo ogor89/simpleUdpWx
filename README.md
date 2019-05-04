@@ -44,6 +44,11 @@ Parameters needs to be changed:
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ogor89/simpleUdpWx/tags).
 
 ## Changelog
+1.0.2
+
+Fixes:
+* Fixed wrong argument calling UDP sending function.
+
 1.0.1
 
 Fixes:
