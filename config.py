@@ -30,3 +30,5 @@ class Config:
     comment = 'simpleUDPwx station'  # Comment attached to WX data.
     # Status sent as separate APRS frame. If None or '' additional frame will not be sent.
     status = ''
+    normalize_pressure = True
+    normalize_temperature = False

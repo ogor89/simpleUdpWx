@@ -7,7 +7,7 @@ from config import Config as _Config
 
 
 class Config(_Config):
-    _version = '1.1.0'
+    _version = '1.2.0-alpha'
 
     @staticmethod
     @property
@@ -209,7 +209,11 @@ class AprsWx:
         t, p, h = AprsWx._read_sensor()
 
         # Temperature conversion from ºC to ºF
-        tf = ((AprsWx._normalize_temperature(t)*9//5)+3200) // 100
+        if Config.normalize_temperature:
+            tf = AprsWx._normalize_temperature(t)
+        else:
+            tf = t
+        tf = ((tf*9//5)+3200) // 100
         if tf < 100:
             if tf < 10:
                 tf = '0' + str(tf)
@@ -228,7 +232,8 @@ class AprsWx:
 
         # Pressure calculation
         p //= 256
-        p = AprsWx._normalize_pressure(p, t / 100)
+        if Config.normalize_pressure:
+            p = AprsWx._normalize_pressure(p, t / 100)
         p //= 10
         if 9999 < p:
             p = str(p)[:5]
