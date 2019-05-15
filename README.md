@@ -44,7 +44,7 @@ Parameters needs to be changed:
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ogor89/simpleUdpWx/tags).
 
 ## Changelog
-1.1.0-alpha
+1.1.0
 
 Fixes:
 * Server IP getting loop now breaks on first active server.
@@ -92,7 +92,7 @@ Features:
 * Transmit delay based on interrupt.
 * Input voltage monitoring.
 * *verbose* configuration parameter.
-* DHCP support.
+* Non-DHCP networks support.
 * Complete README.md file.
 
 ## Author

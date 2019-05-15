@@ -7,7 +7,7 @@ from config import Config as _Config
 
 
 class Config(_Config):
-    _version = '1.1.0-alpha'
+    _version = '1.1.0'
 
     @staticmethod
     @property
