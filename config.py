@@ -30,5 +30,11 @@ class Config:
     comment = 'simpleUDPwx station'  # Comment attached to WX data.
     # Status sent as separate APRS frame. If None or '' additional frame will not be sent.
     status = ''
+
     normalize_pressure = True
     normalize_temperature = False
+    measure_voltage = True
+
+    # Resistances of voltage divider for ADC in kOhms
+    adc_r = 100
+    adc_r_total = 1020

@@ -7,7 +7,7 @@ from config import Config as _Config
 
 
 class Config(_Config):
-    _version = '1.2.0-alpha'
+    _version = '1.2.0-alpha.1'
 
     @staticmethod
     @property
@@ -121,23 +121,14 @@ class Connection:
                 sock.sendto(message, (to_addr, self.udp_default_port))
 
 
-class AprsWx:
+class Aprs:
     """
     Holds creating of TNC-2 formatted messages for APRS network.
-    Additionally it holds BME280 sensor.
     """
 
     # TODO: Add wake-up and sleep functionality for BME280.
     # TODO: Create separate class for sensor functionality.
-    # TODO: Change methods to class variables (with getters only).
-
-    @staticmethod
-    def _read_sensor():
-        # I2C SCL is on IO14, SDA on IO16
-        i2c = machine.I2C(scl=machine.Pin(14), sda=machine.Pin(16))
-        bme = BME280(i2c=i2c)
-        bme.read_compensated_data()  # First read after reset is corrupted.
-        return bme.read_compensated_data()
+    # TODO: Change methods to class variables (with getters only). Think about that.
 
     @staticmethod
     def _is_login_line():
@@ -152,7 +143,6 @@ class AprsWx:
         elif 2 == len(name_splitted):
             login = name_splitted[0]
 
-        # 'user SQ8BRZ pass 19115 vers espudp 0.1\n'
         return 'user ' + login + ' pass ' + Config.passwd + ' vers simpleUDPwx 0.0\n'
 
     @staticmethod
@@ -170,6 +160,42 @@ class AprsWx:
         :return: str
         """
         return Config.latitude + Config.symbol[0] + Config.longitude + Config.symbol[1]
+
+    @staticmethod
+    def _status_frame():
+        """
+        Returns complete TNC-2 formatted status frame.
+        Can be used as additional comment.
+        :return: str
+        """
+        if isinstance(Config.status, str) and '' != Config.status.strip():
+            return Aprs._header() + '>' + Config.status
+        return None
+
+    @staticmethod
+    def generate_main_frames():
+        """
+        Returns list with TNC-2 formatted status frame if status is configured. If not - returns empty list.
+        :return: list of str
+        """
+        messages = []
+        if Aprs._status_frame() is not None:
+            messages = messages + [Aprs._is_login_line() + Aprs._status_frame()]
+        return messages
+
+
+class AprsWx(Aprs):
+    """
+    Holds creating of TNC-2 formatted weather messages for APRS network.
+    Additionally it holds BME280 sensor.
+    """
+    @staticmethod
+    def _read_sensor():
+        # I2C SCL is on IO14, SDA on IO16
+        i2c = machine.I2C(scl=machine.Pin(14), sda=machine.Pin(16))
+        bme = BME280(i2c=i2c)
+        bme.read_compensated_data()  # First read after reset is corrupted.
+        return bme.read_compensated_data()
 
     @staticmethod
     def _normalize_temperature(absolute_temperature):
@@ -204,8 +230,6 @@ class AprsWx:
         :return: str
         """
         # TODO: Improve calculations (rounding).
-        # TODO: Add pressure normalisation.
-        # TODO: test normalization.
         t, p, h = AprsWx._read_sensor()
 
         # Temperature conversion from ºC to ºF
@@ -244,7 +268,7 @@ class AprsWx:
         return '000/000g...t' + tf + 'r...p...P...h' + h + 'b' + p
 
     @staticmethod
-    def _wx_frame():
+    def wx_frame():
         """
         Returns complete TNC-2 formatted WX frame.
         '!' after header means station can't respond for messages (Tx only).
@@ -253,23 +277,114 @@ class AprsWx:
         return AprsWx._header() + '!' + AprsWx._position() + AprsWx._calculate_wx() + Config.comment
 
     @staticmethod
-    def _status_frame():
+    def generate_wx_frames():
         """
-        Returns complete TNC-2 formatted status frame.
-        Can be used as additional comment.
-        :return: str
-        """
-        if isinstance(Config.status, str) and '' != Config.status.strip():
-            return AprsWx._header() + '>' + Config.status
-        return None
-
-    @staticmethod
-    def generate_frames():
-        """
-        Returns list with TNC-2 formatted frames.
+        Returns list with TNC-2 formatted frame.
         :return: list of str
         """
-        messages = [AprsWx._is_login_line() + AprsWx._wx_frame()]
-        if AprsWx._status_frame() is not None:
-            messages = messages + [AprsWx._is_login_line() + AprsWx._status_frame()]
-        return messages
+        return [Aprs._is_login_line() + AprsWx.wx_frame()]
+
+
+class AprsTelemetry(Aprs):
+    """
+    Holds creating of TNC-2 formatted telemetry messages for APRS network.
+    Additionally it holds ADC.
+    """
+    # TODO: Calculate _telemetry_no from RTC and Config.txDelay.
+    # TODO: Prepare all methods for all telemetry frames (T PARM UNIT EQNS (maybe BITS)).
+    # TODO: Docstrings in class.
+
+    _telemetry_no = None
+
+    @property
+    def telemetry_no(self):
+        if 999 < self._telemetry_no:
+            self._telemetry_no = 0
+        telemetry_no = str(self._telemetry_no)
+        self._telemetry_no += 1
+        zero_no = 3 - len(telemetry_no)
+        return '0' * zero_no + telemetry_no
+
+    def __init__(self):
+        self._telemetry_no = 0
+
+    @staticmethod
+    def _calculate_voltage(adc=0):
+        """
+        Calculates voltage for telemetry values frame.
+        "adc" parameter is 0 to 1024 voltage measured by "machine.ADC(0).read()".
+        Returns 3 digit string, human readable - dividing by 10 gives voltage in V.
+        :param adc: int
+        :return: str
+        """
+        # 0 -> 0.0V; 1024 -> 1.0V
+        voltage = round((Config.adc_r / Config.adc_r_total) * adc)
+        if voltage > 255:
+            voltage = 255
+
+        voltage = str(voltage)
+        zero_no = 3 - len(voltage)
+        return '0' * zero_no + voltage
+
+    @staticmethod
+    def _calculate_hires_voltage(adc=0):
+        """
+        Calculates voltage for telemetry values frame.
+        "adc" parameter is 0 to 1024 voltage measured by "machine.ADC(0).read()".
+        Returns 3 digit string with better resolution than _calculate_voltage(), but less human readable.
+        :param adc: int
+        :return: str
+        """
+        voltage = round((Config.adc_r / Config.adc_r_total * 10 / 2) * adc)
+        if voltage > 255:
+            voltage = 255
+
+        voltage = str(voltage)
+        zero_no = 3 - len(voltage)
+        return '0' * zero_no + voltage
+
+    def _telemetry_values_frame(self):
+        """
+        Creates telemetry values frame.
+        Not used parameters are 0 because of problems with some interpreters like aprs.fi.
+        :return: str
+        """
+        # TODO: Report issue on GitHub for aprs.fi.
+        adc = machine.ADC(0).read()
+        return Aprs._header() + 'T#' + self.telemetry_no + ',' + \
+            AprsTelemetry._calculate_voltage(adc) + ',' + \
+            AprsTelemetry._calculate_hires_voltage(adc) + ',000,000,000,00000000'
+
+    def _telemetry_parameters_frame(self):
+        """
+        Creates telemetry parameters name frame.
+        Not used parameters are named because of problems with some interpreters like aprs.fi.
+        :return: str
+        """
+        return Aprs._header() + ':' + Config.call + ' :PARM.Vbat10,Vbat5,val3,val4,val5'
+
+    def _telemetry_units_frame(self):
+        """
+        Creates telemetry units frame.
+        Not used parameters are named because of problems with some interpreters like aprs.fi.
+        :return: str
+        """
+        return Aprs._header() + ':' + Config.call + ' :UNIT.V,V,u3,u4,u5'
+
+    def _telemetry_equasions_frame(self):
+        """
+        Creates telemetry equations frame.
+        Not used parameters are 0 because of problems with some interpreters like aprs.fi.
+        :return: str
+        """
+        return Aprs._header() + ':' + Config.call + ' :EQNS.0,0.1,0, 0,0.02,0,0,0,0,0,0,0,0,0,0'
+
+    def generate_telemetry_frames(self):
+        """
+        Returns list with TNC-2 formatted frames for telemetry reporting.
+        :return: list of str
+        """
+        return [Aprs._is_login_line() + self._telemetry_values_frame(),
+                Aprs._is_login_line() + self._telemetry_parameters_frame(),
+                Aprs._is_login_line() + self._telemetry_units_frame(),
+                Aprs._is_login_line() + self._telemetry_equasions_frame()]
