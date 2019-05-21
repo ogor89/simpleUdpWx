@@ -191,8 +191,8 @@ class AprsWx(Aprs):
     """
     @staticmethod
     def _read_sensor():
-        # I2C SCL is on IO14, SDA on IO16
-        i2c = machine.I2C(scl=machine.Pin(14), sda=machine.Pin(16))
+        # I2C SCL is on IO12, SDA on IO14
+        i2c = machine.I2C(scl=machine.Pin(12), sda=machine.Pin(14))
         bme = BME280(i2c=i2c)
         bme.read_compensated_data()  # First read after reset is corrupted.
         return bme.read_compensated_data()
