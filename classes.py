@@ -344,7 +344,7 @@ class AprsTelemetry(Aprs):
         return '0' * zero_no + voltage
 
     def _calculate_telemetry_no(self, rtc_datetime):
-        rtc_datetime = rtc_datetime[4] * 60 + rtc_datetime[5] // Config.txDelay
+        rtc_datetime = (rtc_datetime[4] * 60 + rtc_datetime[5]) // Config.txDelay
         # TODO: Remove print.
         # print("Telemetry frame:  ", rtc_datetime)
         rtc_datetime = str(rtc_datetime)
