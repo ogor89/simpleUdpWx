@@ -87,10 +87,10 @@ Features:
 
 ## Plans
 1.2.0
-* Power saving for ESP8266.
+* Power saving for ESP8266. (in progress)
 * Power saving for BME280.
-* Transmit delay based on interrupt.
-* Input voltage monitoring.
+* Transmit delay based on interrupt. (done)
+* Input voltage monitoring. (done)
 * *verbose* configuration parameter.
 * Non-DHCP networks support.
 * Complete README.md file.

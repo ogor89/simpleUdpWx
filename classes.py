@@ -7,7 +7,7 @@ from config import Config as _Config
 
 
 class Config(_Config):
-    _version = '1.2.0-alpha.1'
+    _version = '1.2.0-alpha.2'
 
     @staticmethod
     @property
@@ -22,7 +22,7 @@ class Connection:
     """
     Class holds WiFi connection and sends TNC-2 formatted data to APTS-IS network.
     """
-    # TODO: Add variable to hold time spent on connecting.
+    # TODO: Redesign to do measurements during connecting.
 
     _udp_default_port = 8080
     # TODO: Getter & setter for sta_if?
@@ -44,27 +44,24 @@ class Connection:
         """
         Activates WiFi interface nad connects to WiFi AP.
         When connects returns True, if interface is not connected after timeout time returns False.
-        :return: bool
         """
         # TODO: Test with no delay time after connection.
-        connected = False
         if not self.sta_if.isconnected():
             print('Connecting...')
             self.sta_if.active(True)
             self.sta_if.connect(Config.wifi_ssid, Config.wifi_passwd)
 
-            for timestep in range(0, Config.wifi_timeout):
-                print(timestep + 1, end=' ')
-                time.sleep(1)
-                if self.sta_if.isconnected():
-                    connected = True
-                    print('Connected!')
-                    # Delay time
-                    time.sleep(2)
-                    break
-        else:
-            connected = True
-
+    def wait_for_connection(self):
+        connected = False
+        for timestep in range(0, Config.wifi_timeout):
+            print(timestep + 1, end=' ')
+            time.sleep(1)
+            if self.sta_if.isconnected():
+                connected = True
+                print('Connected!')
+                # Delay time
+                time.sleep(2)
+                break
         return connected
 
     def disconnect(self):
@@ -74,7 +71,7 @@ class Connection:
         """
         # TODO: Test with no delay time before disconnecting.
         # TODO: Add bool return.
-        print('disconnecting...')
+        print('Disconnecting...')
         # Delay time
         time.sleep(2)
         self.sta_if.active(False)
@@ -116,8 +113,6 @@ class Connection:
         if isinstance(messages, list):
             for message in messages:
                 message = message.encode('utf-8')
-                # print('Sending:')
-                # print(message)
                 sock.sendto(message, (to_addr, self.udp_default_port))
 
 
@@ -127,8 +122,7 @@ class Aprs:
     """
 
     # TODO: Add wake-up and sleep functionality for BME280.
-    # TODO: Create separate class for sensor functionality.
-    # TODO: Change methods to class variables (with getters only). Think about that.
+    # TODO: Create separate class for sensor functionality. Maybe.
 
     @staticmethod
     def _is_login_line():
@@ -290,23 +284,7 @@ class AprsTelemetry(Aprs):
     Holds creating of TNC-2 formatted telemetry messages for APRS network.
     Additionally it holds ADC.
     """
-    # TODO: Calculate _telemetry_no from RTC and Config.txDelay.
-    # TODO: Prepare all methods for all telemetry frames (T PARM UNIT EQNS (maybe BITS)).
-    # TODO: Docstrings in class.
-
-    _telemetry_no = None
-
-    @property
-    def telemetry_no(self):
-        if 999 < self._telemetry_no:
-            self._telemetry_no = 0
-        telemetry_no = str(self._telemetry_no)
-        self._telemetry_no += 1
-        zero_no = 3 - len(telemetry_no)
-        return '0' * zero_no + telemetry_no
-
-    def __init__(self):
-        self._telemetry_no = 0
+    # TODO: Update docstrings in class.
 
     @staticmethod
     def _calculate_voltage(adc=0):
@@ -343,14 +321,6 @@ class AprsTelemetry(Aprs):
         zero_no = 3 - len(voltage)
         return '0' * zero_no + voltage
 
-    def _calculate_telemetry_no(self, rtc_datetime):
-        rtc_datetime = (rtc_datetime[4] * 60 + rtc_datetime[5]) // Config.txDelay
-        # TODO: Remove print.
-        # print("Telemetry frame:  ", rtc_datetime)
-        rtc_datetime = str(rtc_datetime)
-        zero_no = 3 - len(rtc_datetime)
-        return '0' * zero_no + rtc_datetime
-
     def _telemetry_values_frame(self, raport_no):
         """
         Creates telemetry values frame.
@@ -359,7 +329,6 @@ class AprsTelemetry(Aprs):
         """
         # TODO: Report issue on GitHub for aprs.fi.
         adc = machine.ADC(0).read()
-        # return Aprs._header() + 'T#' + self._calculate_telemetry_no(raport_no) + ',' + \
         return Aprs._header() + 'T#' + raport_no + ',' + \
             AprsTelemetry._calculate_voltage(adc) + ',' + \
             AprsTelemetry._calculate_hires_voltage(adc) + ',000,000,000,00000000'
