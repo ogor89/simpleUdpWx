@@ -10,11 +10,4 @@ import time
 # webrepl.start()
 gc.collect()
 
-print('\nDeactivating WLAN...')
-
-boot_sta_if = network.WLAN(network.STA_IF)
-boot_sta_if.active(False)
-
-time.sleep(10)
-
 import simpleUdpWx

@@ -116,8 +116,8 @@ class Connection:
         if isinstance(messages, list):
             for message in messages:
                 message = message.encode('utf-8')
-                print('Sending:')
-                print(message)
+                # print('Sending:')
+                # print(message)
                 sock.sendto(message, (to_addr, self.udp_default_port))
 
 
@@ -343,7 +343,15 @@ class AprsTelemetry(Aprs):
         zero_no = 3 - len(voltage)
         return '0' * zero_no + voltage
 
-    def _telemetry_values_frame(self):
+    def _calculate_telemetry_no(self, rtc_datetime):
+        rtc_datetime = rtc_datetime[4] * 60 + rtc_datetime[5] // Config.txDelay
+        # TODO: Remove print.
+        # print("Telemetry frame:  ", rtc_datetime)
+        rtc_datetime = str(rtc_datetime)
+        zero_no = 3 - len(rtc_datetime)
+        return '0' * zero_no + rtc_datetime
+
+    def _telemetry_values_frame(self, rtc_datetime):
         """
         Creates telemetry values frame.
         Not used parameters are 0 because of problems with some interpreters like aprs.fi.
@@ -351,7 +359,7 @@ class AprsTelemetry(Aprs):
         """
         # TODO: Report issue on GitHub for aprs.fi.
         adc = machine.ADC(0).read()
-        return Aprs._header() + 'T#' + self.telemetry_no + ',' + \
+        return Aprs._header() + 'T#' + self._calculate_telemetry_no(rtc_datetime) + ',' + \
             AprsTelemetry._calculate_voltage(adc) + ',' + \
             AprsTelemetry._calculate_hires_voltage(adc) + ',000,000,000,00000000'
 
@@ -379,12 +387,12 @@ class AprsTelemetry(Aprs):
         """
         return Aprs._header() + ':' + Config.call + ' :EQNS.0,0.1,0, 0,0.02,0,0,0,0,0,0,0,0,0,0'
 
-    def generate_telemetry_frames(self):
+    def generate_telemetry_frames(self, rtc_datetime):
         """
         Returns list with TNC-2 formatted frames for telemetry reporting.
         :return: list of str
         """
-        return [Aprs._is_login_line() + self._telemetry_values_frame(),
+        return [Aprs._is_login_line() + self._telemetry_values_frame(rtc_datetime),
                 Aprs._is_login_line() + self._telemetry_parameters_frame(),
                 Aprs._is_login_line() + self._telemetry_units_frame(),
                 Aprs._is_login_line() + self._telemetry_equasions_frame()]
