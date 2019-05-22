@@ -351,7 +351,7 @@ class AprsTelemetry(Aprs):
         zero_no = 3 - len(rtc_datetime)
         return '0' * zero_no + rtc_datetime
 
-    def _telemetry_values_frame(self, rtc_datetime):
+    def _telemetry_values_frame(self, raport_no):
         """
         Creates telemetry values frame.
         Not used parameters are 0 because of problems with some interpreters like aprs.fi.
@@ -359,7 +359,8 @@ class AprsTelemetry(Aprs):
         """
         # TODO: Report issue on GitHub for aprs.fi.
         adc = machine.ADC(0).read()
-        return Aprs._header() + 'T#' + self._calculate_telemetry_no(rtc_datetime) + ',' + \
+        # return Aprs._header() + 'T#' + self._calculate_telemetry_no(raport_no) + ',' + \
+        return Aprs._header() + 'T#' + raport_no + ',' + \
             AprsTelemetry._calculate_voltage(adc) + ',' + \
             AprsTelemetry._calculate_hires_voltage(adc) + ',000,000,000,00000000'
 
@@ -387,12 +388,12 @@ class AprsTelemetry(Aprs):
         """
         return Aprs._header() + ':' + Config.call + ' :EQNS.0,0.1,0, 0,0.02,0,0,0,0,0,0,0,0,0,0'
 
-    def generate_telemetry_frames(self, rtc_datetime):
+    def generate_telemetry_frames(self, raport_no):
         """
         Returns list with TNC-2 formatted frames for telemetry reporting.
         :return: list of str
         """
-        return [Aprs._is_login_line() + self._telemetry_values_frame(rtc_datetime),
+        return [Aprs._is_login_line() + self._telemetry_values_frame(raport_no),
                 Aprs._is_login_line() + self._telemetry_parameters_frame(),
                 Aprs._is_login_line() + self._telemetry_units_frame(),
                 Aprs._is_login_line() + self._telemetry_equasions_frame()]
