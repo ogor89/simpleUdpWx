@@ -7,15 +7,22 @@ from config import Config as _Config
 
 
 class Config(_Config):
-    _version = '1.2.0-alpha.2'
+    _version = '1.2.0-beta'
+    _min_adc = 0
 
-    @staticmethod
     @property
-    def version():
+    def version(self):
         return Config._version
 
+    @property
+    def min_adc(self):
+        return self._min_adc
+
     def __init__(self):
-        pass
+        adc = (_Config.adc_r_total / _Config.adc_r) * 2.5
+        self._min_adc = adc // 1
+        if adc != self._min_adc:
+            self._min_adc += 1
 
 
 class Connection:
@@ -321,14 +328,14 @@ class AprsTelemetry(Aprs):
         zero_no = 3 - len(voltage)
         return '0' * zero_no + voltage
 
-    def _telemetry_values_frame(self, raport_no):
+    def _telemetry_values_frame(self, raport_no, adc=None):
         """
         Creates telemetry values frame.
         Not used parameters are 0 because of problems with some interpreters like aprs.fi.
         :return: str
         """
-        # TODO: Report issue on GitHub for aprs.fi.
-        adc = machine.ADC(0).read()
+        if adc is None:
+            adc = machine.ADC(0).read()
         return Aprs._header() + 'T#' + raport_no + ',' + \
             AprsTelemetry._calculate_voltage(adc) + ',' + \
             AprsTelemetry._calculate_hires_voltage(adc) + ',000,000,000,00000000'
@@ -357,12 +364,12 @@ class AprsTelemetry(Aprs):
         """
         return Aprs._header() + ':' + Config.call + ' :EQNS.0,0.1,0, 0,0.02,0,0,0,0,0,0,0,0,0,0'
 
-    def generate_telemetry_frames(self, raport_no):
+    def generate_telemetry_frames(self, raport_no, adc=None):
         """
         Returns list with TNC-2 formatted frames for telemetry reporting.
         :return: list of str
         """
-        return [Aprs._is_login_line() + self._telemetry_values_frame(raport_no),
+        return [Aprs._is_login_line() + self._telemetry_values_frame(raport_no, adc),
                 Aprs._is_login_line() + self._telemetry_parameters_frame(),
                 Aprs._is_login_line() + self._telemetry_units_frame(),
                 Aprs._is_login_line() + self._telemetry_equasions_frame()]

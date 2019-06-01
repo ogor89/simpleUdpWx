@@ -7,6 +7,7 @@ from classes import Config, Connection, Aprs, AprsWx, AprsTelemetry
 
 rtc = machine.RTC()
 connection = Connection()
+config = Config()
 telemetry = AprsTelemetry()
 
 
@@ -27,14 +28,17 @@ def main_routine(sleep_time):
     # Set RTC.ALARM0 to fire after sleep_time minutes (waking the device).
     rtc.alarm(rtc.ALARM0, sleep_time * 60000)
 
-    connection.connect()
-    frames = Aprs.generate_main_frames() + \
-        AprsWx.generate_wx_frames() + \
-        telemetry.generate_telemetry_frames(calculate_raport_no(rtc_datetime))
-    if connection.wait_for_connection():
-        print('Network config:', connection.ifconfig())
-        connection.udp_send_messages(frames, connection.get_ip_from_config())
-    connection.disconnect()
+    # operating voltage: 2,5 - 3,6
+    adc = machine.ADC(0).read()
+    if adc > config.min_adc:
+        connection.connect()
+        frames = Aprs.generate_main_frames() + \
+            AprsWx.generate_wx_frames() + \
+            telemetry.generate_telemetry_frames(calculate_raport_no(rtc_datetime))
+        if connection.wait_for_connection():
+            print('Network config:', connection.ifconfig())
+            connection.udp_send_messages(frames, connection.get_ip_from_config())
+        connection.disconnect()
 
     print("Go to sleep...")
     machine.deepsleep()
